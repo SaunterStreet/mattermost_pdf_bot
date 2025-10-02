@@ -100,51 +100,28 @@ def generate_text_data(user_input: str) -> list:
     address_line1 = lines[1].strip() if len(lines) > 1 else "2708122 Israel"
     address_line2 = lines[2].strip() if len(lines) > 2 else "Kiryat-Bialik"
     address_line3 = lines[3].strip() if len(lines) > 3 else "Giera Street 12/35 ISRAEL"
-    
-    # Генерация дат
-    today = datetime.now()
-    statement_date = today.strftime("%b %d %Y")  # Oct 3 2025
-    date_format1 = today.strftime("%b %d, %Y")  # Sep 22, 2025
-    month_ago = today - timedelta(days=30)
-    date_format2 = month_ago.strftime("%b %d, %Y")  # Aug 22, 2025
-    
-    # Дата через месяц от первого значения комментария 3
-    next_month = today + timedelta(days=30)
-    next_month_format = next_month.strftime("%b %d")  # Oct 22
-    
-    # Период 30 дней
-    period_start = today.strftime("%b %d")
-    period_end = next_month.strftime("%b %d")
-    period_text = f"{period_start}-{period_end} (30 days)"
-    
-    # Текущий год
-    current_year = today.strftime("%Y")
-    
-    # Текущий месяц этот год и прошлый год
-    current_month_this_year = today.strftime("%b %Y")
-    current_month_last_year = today.replace(year=today.year - 1).strftime("%b %Y")
-    
-    # Рандомные данные
+    statement_date = lines[4].strip() 
     account_number = ''.join([str(randint(0, 9)) for _ in range(11)])
-    
-    # Даты для комментария 5
-    random_month = randint(1, 12)
-    random_day1 = randint(1, 28)
-    random_day2 = random_day1 + 1
-    date_5_1 = datetime(2024, random_month, random_day1).strftime("%b %d")
-    date_5_2 = datetime(2024, random_month, random_day2).strftime("%b %d")
-    
-    # Рандомные числа
-    value_6 = round(uniform(180, 185), 2)
-    value_7 = round(uniform(130, 135), 2)
-    value_8 = round(uniform(78, 82), 2)
-    value_9 = round(uniform(115, 125), 2)
-    value_13 = randint(88500, 89000)
-    value_14 = randint(87000, 87300)
-    value_15 = value_13 - value_14
-    value_16 = round(uniform(187, 190), 2)
-    random_val1 = randint(20, 40)
-    random_val2 = randint(20, 40)
+    date_5_1 = lines[5].strip()
+    date_5_2 = lines[6].strip()
+    date_format1 = lines[7].strip()
+    date_format2 = lines[8].strip()
+    value_6 = lines[9].strip()
+    value_7 = lines[10].strip()
+    value_8 = lines[11].strip()
+    value_9 = lines[12].strip()
+    next_month_format = lines[13].strip()
+    current_year = lines[14].strip()
+    period_text = lines[15].strip()
+    value_13 = lines[16].strip()
+    value_14 = lines[17].strip()
+    value_15 = lines[18].strip()
+    value_16 = lines[19].strip()
+    current_month_this_year = lines[20].strip()
+    current_month_last_year = lines[21].strip()
+    random_val1 = lines[22].strip()
+    random_val2 = lines[23].strip()
+    meter = ''.join([str(randint(0, 9)) for _ in range(9)])
     
     text_data = [
         # 1. Имя пользователя
@@ -417,6 +394,14 @@ def generate_text_data(user_input: str) -> list:
             'size': 11,
             'align': 'left'
         },
+        {
+            'text': meter,
+            'x': 440.6,
+            'y': 334.3,
+            'font': 'calibri',
+            'size': 11,
+            'align': 'left'
+        },
     ]
     
     return text_data
@@ -426,10 +411,30 @@ def generate_text_data(user_input: str) -> list:
 async def command_start_handler(message: Message):
     await message.answer(
         "Отправь данные в формате:\n\n"
-        "JOHN WICK\n"
-        "Maddison St\n"
-        "Hod Hasharon\n"
-        "5 Eln Hal"
+        "*Имя*, например: KHAED WADGE\n"
+        "*Адрес, 1 строка*, например: 2708123 Israel\n"
+        "*Адрес, 2 строка*, например: Hod Hasharon\n"
+        "*Адрес, 3 строка*, например: 5 Eln Hal\n"
+        "*Statement date*, например: Sep 22 2025\n"
+        "*Previouse balance date*, например: Aug 4\n"
+        "*Payment*, например: Aug 5\n"
+        "*Actual reading, 1 строка*, например: Sep 22, 2025\n"
+        "*Actual reading, 2 строка*, например: Aug 22, 2025\n"
+        "*1 блок данных с числами справа.*. Например: 182.55\n"
+        "*2 блок данных. Supplier.*, например: 131.76\n"
+        "*2 блок данных. Delivery.*, например: 79.63\n"
+        "*2 и 3 блок данных. Total.*, например: 125.39 или 116.39\n"
+        "*3 блок. The total ... by*, например Oct 22\n"
+        "*3 блок. Год на след строке, например 2025\n"
+        "*3 блок. Billing period*. Например: Aug 22- Sep 22 (30 days)\n"
+        "*3 блок снизу справа. 1 значение*, например: 23412\n"
+        "*3 блок снизу справа. 2 значение*, например: 12341\n"
+        "*4 блок сверху справа. Actual usage*, например: 1321\n"
+        "*5 блок. Total*, например: 189.76\n"
+        "*Блок слева. 1 строка*, например: Aug 2025 (37F)\n"
+        "*Блок слева. 2 строка*, например: Aug 2024 (37F)\n"
+        "*Киловаты. 1 строка*, например: 33\n"
+        "*Киловаты. 2 строка*, например: 33"
     )
 
 
@@ -438,25 +443,11 @@ async def process_text(message: Message):
     text = message.text
     lines = text.strip().split('\n')
 
-    if len(lines) < 4:
-        await message.answer("Недостаточно данных! Нужно минимум 4 строки.")
+    if len(lines) < 20:
+        await message.answer("Недостаточно данных! Нужно минимум 20 строки.")
         return
 
-    name = lines[0].strip()
-    address1 = lines[1].strip()
-    address2 = lines[2].strip()
-    address3 = lines[3].strip()
-    
-    result_message = (
-        "Данные получены!\n\n"
-        f"Имя: {name}\n"
-        f"Адрес 1: {address1}\n"
-        f"Адрес 2: {address2}\n"
-        f"Адрес 3: {address3}\n"
-    )
-    
-    await message.answer(result_message)
-    logging.info(f"Processing data for: {name}")
+    logging.info(f"Processing data.")
     
     await message.answer("Начинаю обработку PDF...")
     
