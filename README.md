@@ -70,22 +70,22 @@ BOT_TOKEN=your_actual_bot_token_here
 
 3. **Запустите контейнер:**
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 4. **Проверьте статус:**
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 5. **Просмотр логов:**
 ```bash
-docker-compose logs -f
+docker compose logs -f
 ```
 
 6. **Остановка бота:**
 ```bash
-docker-compose down
+docker compose down
 ```
 
 #### Способ Б: Чистый Docker
