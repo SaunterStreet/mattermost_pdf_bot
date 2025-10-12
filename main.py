@@ -13,9 +13,7 @@ class WebSocketMattermostApp:
     mm_ws_headers = dict()
     connection = None
     bot_token = os.getenv('BOT_TOKEN')
-    print(bot_token)
     mm_url = os.getenv('MM_URL')
-    print(mm_url)
     bot_user_id = None
     user_modes = {}
 

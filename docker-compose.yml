@@ -11,9 +11,9 @@ services:
       - ./template_ie.pdf:/app/template_ie.pdf
       - ./template_ir.pdf:/app/template_ir.pdf
       - ./template_uk.pdf:/app/template_uk.pdf
-      - ./Calibri:/app/fonts/Calibri
-      - ./Arial:/app/fonts/Arial
-      - ./opensans:/app/fonts/opensans
-      - ./Tahoma:/app/fonts/Tahoma
-      - ./utsaah:/app/fonts/utsaah
-      - ./Verdana:/app/fonts/Verdana
+      - ./fonts/Calibri:/app/fonts/Calibri
+      - ./fonts/Arial:/app/fonts/Arial
+      - ./fonts/opensans:/app/fonts/opensans
+      - ./fonts/Tahoma:/app/fonts/Tahoma
+      - ./fonts/utsaah:/app/fonts/utsaah
+      - ./fonts/Verdana:/app/fonts/Verdana
