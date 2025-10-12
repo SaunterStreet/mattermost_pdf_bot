@@ -3,10 +3,17 @@ version: '3.8'
 services:
   bot:
     build: .
-    container_name: telegram_pdf_bot
+    container_name: mattermost_bot
     restart: unless-stopped
     env_file:
       - .env
     volumes:
-      - ./template.pdf:/app/template.pdf
-      - ./Calibri:/app/Calibri
+      - ./template_ie.pdf:/app/template_ie.pdf
+      - ./template_ir.pdf:/app/template_ir.pdf
+      - ./template_uk.pdf:/app/template_uk.pdf
+      - ./Calibri:/app/fonts/Calibri
+      - ./Arial:/app/fonts/Arial
+      - ./opensans:/app/fonts/opensans
+      - ./Tahoma:/app/fonts/Tahoma
+      - ./utsaah:/app/fonts/utsaah
+      - ./Verdana:/app/fonts/Verdana

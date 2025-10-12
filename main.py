@@ -1,488 +1,243 @@
-import asyncio
 import logging
-from os import getenv
-from datetime import datetime, timedelta
-from random import randint, uniform
+import json
+import os
+import requests
+import websocket
+from pdf import *
+from templates import *
 from dotenv import load_dotenv
-
-from aiogram import Bot, Dispatcher, F, types
-from aiogram.filters import Command
-from aiogram.types import Message, FSInputFile
-from aiogram.fsm.context import FSMContext
-
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from PyPDF2 import PdfReader, PdfWriter
-from io import BytesIO
-
-# Настройка логирования
-logging.basicConfig(level=logging.INFO)
-
-# Регистрация шрифтов
-pdfmetrics.registerFont(TTFont('calibri', 'Calibri/calibri.ttf'))
-pdfmetrics.registerFont(TTFont('calibri_bold', 'Calibri/calibri_bold.ttf'))
 
 load_dotenv()
 
-dp = Dispatcher()
-TOKEN = getenv("BOT_TOKEN")
+class WebSocketMattermostApp:
+    mm_ws_headers = dict()
+    connection = None
+    bot_token = os.getenv('BOT_TOKEN')
+    print(bot_token)
+    mm_url = os.getenv('MM_URL')
+    print(mm_url)
+    bot_user_id = None
+    user_modes = {}
 
+    @staticmethod
+    def get_bot_id():
+        url = f"{WebSocketMattermostApp.mm_url}/api/v4/users/me"
+        headers = {"Authorization": f"Bearer {WebSocketMattermostApp.bot_token}"}
+        try:
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                user_data = response.json()
+                WebSocketMattermostApp.bot_user_id = user_data['id']
+                print(f"🤖 ID бота: {WebSocketMattermostApp.bot_user_id}")
+        except Exception as e:
+            print(f"❌ Ошибка получения ID: {e}")
 
-class PDFEditor:
-    def __init__(self, template_path: str):
-        """
-        Инициализация редактора PDF
-        :param template_path: путь к шаблону PDF
-        """
-        self.template_path = template_path
-        self.reader = PdfReader(template_path)
-        
-    def add_text(self, output_path: str, text_data: list):
-        """
-        Добавление текста в одностраничный PDF по координатам
-        :param output_path: путь для сохранения результата
-        :param text_data: список словарей с данными текста
-        """
-        page = self.reader.pages[0]
-        
-        packet = BytesIO()
-        mediabox = page.mediabox
-        page_width = float(mediabox.width)
-        page_height = float(mediabox.height)
+    @staticmethod
+    def send_message(channel_id, message_text):
+        url = f"{WebSocketMattermostApp.mm_url}/api/v4/posts"
+        headers = {
+            "Authorization": f"Bearer {WebSocketMattermostApp.bot_token}",
+            "Content-Type": "application/json"
+        }
+        data = {"channel_id": channel_id, "message": message_text}
+        try:
+            response = requests.post(url, headers=headers, json=data)
+            return response.status_code == 201
+        except Exception as e:
+            print(f"❌ Ошибка отправки: {e}")
+            return False
 
-        page_width += 5
-        page_height += 5
+    @staticmethod
+    def send_pdf(channel_id, pdf_path):
+        try:
+            upload_url = f"{WebSocketMattermostApp.mm_url}/api/v4/files"
+            headers = {"Authorization": f"Bearer {WebSocketMattermostApp.bot_token}"}
+            with open(pdf_path, 'rb') as f:
+                files = {'files': (os.path.basename(pdf_path), f)}
+                data = {'channel_id': channel_id}
+                response = requests.post(upload_url, headers=headers, files=files, data=data)
+            if response.status_code != 201:
+                print(f"❌ Ошибка загрузки: {response.status_code}")
+                return False
+            file_id = response.json()['file_infos'][0]['id']
+            post_url = f"{WebSocketMattermostApp.mm_url}/api/v4/posts"
+            headers["Content-Type"] = "application/json"
+            post_data = {
+                "channel_id": channel_id,
+                "message": "✅ Готово! Вот твой PDF файл.",
+                "file_ids": [file_id]
+            }
+            response = requests.post(post_url, headers=headers, json=post_data)
+            return response.status_code == 201
+        except Exception as e:
+            print(f"❌ Ошибка отправки PDF: {e}")
+            return False
 
-        can = canvas.Canvas(packet, pagesize=(page_width, page_height))
-        
-        for item in text_data:
-            text = item['text']
-            x = item['x']
-            y = item['y']
-            font = item.get('font', 'Helvetica')
-            size = item.get('size', 12)
-            align = item.get('align', 'left')
-            
-            can.setFont(font, size)
-            
-            if align == 'right':
-                can.drawRightString(x, y, text)
-            elif align == 'center':
-                can.drawCentredString(x, y, text)
-            else:
-                can.drawString(x, y, text)
-        
-        can.save()
-        packet.seek(0)
-        
-        overlay_pdf = PdfReader(packet)
-        overlay_page = overlay_pdf.pages[0]
-        
-        page.merge_page(overlay_page)
-        
-        writer = PdfWriter()
-        writer.add_page(page)
-        
-        with open(output_path, 'wb') as output_file:
-            writer.write(output_file)
+    @staticmethod
+    def process_pdf_ir(channel_id, user_id, user_message):
+        lines = user_message.strip().split('\n')
+        if len(lines) < 24:
+            WebSocketMattermostApp.send_message(
+                channel_id,
+                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 24."
+            )
+            return
+        print(f"📨 Обработка данных от {user_id}")
+        WebSocketMattermostApp.send_message(channel_id, "⏳ Начинаю обработку PDF...")
+        try:
+            text_data = text_generator.generate_text_data_ir(user_message)
+            editor = PDFEditor("template_ir.pdf")
+            output_path = f"result_{user_id}.pdf"
+            editor.add_text(output_path, text_data)
+            success = WebSocketMattermostApp.send_pdf(channel_id, output_path)
+            os.remove(output_path)
+            print(f"✅ PDF создан и отправлен: {output_path}")
+            if not success:
+                WebSocketMattermostApp.send_message(channel_id, "❌ Ошибка отправки PDF")
+        except Exception as e:
+            print(f"❌ Ошибка создания PDF: {e}")
+            WebSocketMattermostApp.send_message(channel_id, f"❌ Ошибка: {str(e)}")
 
+    @staticmethod
+    def process_pdf_ie(channel_id, user_id, user_message):
+        lines = user_message.strip().split('\n')
+        if len(lines) < 12:
+            WebSocketMattermostApp.send_message(
+                channel_id,
+                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 24."
+            )
+            return
+        print(f"📨 Обработка данных от {user_id}")
+        WebSocketMattermostApp.send_message(channel_id, "⏳ Начинаю обработку PDF...")
+        try:
+            text_data = text_generator.generate_text_data_ie(user_message)
+            editor = PDFEditor("template_ie.pdf")
+            output_path = f"result_{user_id}.pdf"
+            editor.add_text(output_path, text_data)
+            success = WebSocketMattermostApp.send_pdf(channel_id, output_path)
+            os.remove(output_path)
+            print(f"✅ PDF создан и отправлен: {output_path}")
+            if not success:
+                WebSocketMattermostApp.send_message(channel_id, "❌ Ошибка отправки PDF")
+        except Exception as e:
+            print(f"❌ Ошибка создания PDF: {e}")
+            WebSocketMattermostApp.send_message(channel_id, f"❌ Ошибка: {str(e)}")
 
-def generate_text_data(user_input: str) -> list:
-    """
-    Генерирует text_data на основе пользовательского ввода
-    """
-    lines = user_input.strip().split('\n')
-    
-    # Парсинг пользовательского ввода
-    name = lines[0].strip() if len(lines) > 0 else "JOHN CITIZEN"
-    address_line1 = lines[1].strip() if len(lines) > 1 else "2708122 Israel"
-    address_line2 = lines[2].strip() if len(lines) > 2 else "Kiryat-Bialik"
-    address_line3 = lines[3].strip() if len(lines) > 3 else "Giera Street 12/35 ISRAEL"
-    statement_date = lines[4].strip() 
-    account_number = ''.join([str(randint(0, 9)) for _ in range(11)])
-    date_5_1 = lines[5].strip()
-    date_5_2 = lines[6].strip()
-    date_format1 = lines[7].strip()
-    date_format2 = lines[8].strip()
-    value_6 = lines[9].strip()
-    value_7 = lines[10].strip()
-    value_8 = lines[11].strip()
-    value_9 = lines[12].strip()
-    next_month_format = lines[13].strip()
-    current_year = lines[14].strip()
-    period_text = lines[15].strip()
-    value_13 = lines[16].strip()
-    value_14 = lines[17].strip()
-    value_15 = lines[18].strip()
-    value_16 = lines[19].strip()
-    current_month_this_year = lines[20].strip()
-    current_month_last_year = lines[21].strip()
-    random_val1 = lines[22].strip()
-    random_val2 = lines[23].strip()
-    meter = ''.join([str(randint(0, 9)) for _ in range(9)])
-    
-    text_data = [
-        # 1. Имя пользователя
-        {
-            'text': name,
-            'x': 560,
-            'y': 730,
-            'font': 'calibri_bold',
-            'size': 14,
-            'align': 'right'
-        },
-        # 2. Адрес (3 строки)
-        {
-            'text': address_line1,
-            'x': 560,
-            'y': 717,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'right'
-        },
-        {
-            'text': address_line2,
-            'x': 560,
-            'y': 704,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'right'
-        },
-        {
-            'text': address_line3,
-            'x': 560,
-            'y': 691,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'right'
-        },
-        # 3. Statement date
-        {
-            'text': f'Statement date {statement_date}',
-            'x': 560,
-            'y': 678,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'right'
-        },
-        # 3. (1 строка) - сегодняшняя дата
-        {
-            'text': date_format1,
-            'x': 382,
-            'y': 293.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # 3. (2 строка) - месяц назад
-        {
-            'text': date_format2,
-            'x': 382,
-            'y': 279.8,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # 4. Account number
-        {
-            'text': f'Account number: {account_number}',
-            'x': 560,
-            'y': 665,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'right'
-        },
-        # 5. Рандомные даты (2 строки)
-        {
-            'text': date_5_1,
-            'x': 393.5,
-            'y': 612.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        {
-            'text': date_5_2,
-            'x': 343.5,
-            'y': 585.9,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # 6. Одинаковые значения (2 строки)
-        {
-            'text': str(value_6),
-            'x': 593,
-            'y': 612.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'right'
-        },
-        {
-            'text': str(value_6),
-            'x': 599,
-            'y': 585.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'right'
-        },
-        # 7. Рандомное значение
-        {
-            'text': str(value_7),
-            'x': 562.3,
-            'y': 516.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # 8. Рандомное значение
-        {
-            'text': str(value_8),
-            'x': 563.1,
-            'y': 502.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # 9. Одинаковые значения (2 строки)
-        {
-            'text': str(value_9),
-            'x': 562,
-            'y': 488.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        {
-            'text': str(value_9),
-            'x': 562,
-            'y': 466.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # 10. Дата через месяц
-        {
-            'text': next_month_format,
-            'x': 514,
-            'y': 453.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # 10. Текущий год
-        {
-            'text': current_year,
-            'x': 300.3,
-            'y': 440.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # Повтор адреса (комментарий 2)
-        {
-            'text': address_line1,
-            'x': 300.3,
-            'y': 400.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        {
-            'text': address_line2,
-            'x': 300.3,
-            'y': 387.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        {
-            'text': address_line3,
-            'x': 300.3,
-            'y': 374.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # 12. Период 30 дней
-        {
-            'text': period_text,
-            'x': 380,
-            'y': 320.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # 13. Рандомное целое
-        {
-            'text': str(value_13),
-            'x': 556,
-            'y': 292.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # 14. Рандомное целое
-        {
-            'text': str(value_14),
-            'x': 558,
-            'y': 279.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # 15. Разность
-        {
-            'text': str(value_15),
-            'x': 562,
-            'y': 257.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # 16. Одинаковые значения (2 строки)
-        {
-            'text': str(value_16),
-            'x': 562.5,
-            'y': 216.5,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        {
-            'text': str(value_16),
-            'x': 562.5,
-            'y': 193,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # Нынешний месяц этот год
-        {
-            'text': current_month_this_year,
-            'x': 100,
-            'y': 381,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # Нынешний месяц прошлый год
-        {
-            'text': current_month_last_year,
-            'x': 100,
-            'y': 367.3,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        # Рандомные значения
-        {
-            'text': str(random_val1),
-            'x': 212,
-            'y': 381,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        {
-            'text': str(random_val2),
-            'x': 212,
-            'y': 367.3,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-        {
-            'text': meter,
-            'x': 440.6,
-            'y': 334.3,
-            'font': 'calibri',
-            'size': 11,
-            'align': 'left'
-        },
-    ]
-    
-    return text_data
+    @staticmethod
+    def process_pdf_uk(channel_id, user_id, user_message):
+        lines = user_message.strip().split('\n')
+        if len(lines) < 12:
+            WebSocketMattermostApp.send_message(
+                channel_id,
+                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 24."
+            )
+            return
+        print(f"📨 Обработка данных от {user_id}")
+        WebSocketMattermostApp.send_message(channel_id, "⏳ Начинаю обработку PDF...")
+        try:
+            text_data = text_generator.generate_text_data_uk(user_message)
+            editor = PDFEditor("template_uk.pdf")
+            output_path = f"result_{user_id}.pdf"
+            editor.add_text(output_path, text_data)
+            success = WebSocketMattermostApp.send_pdf(channel_id, output_path)
+            os.remove(output_path)
+            print(f"✅ PDF создан и отправлен: {output_path}")
+            if not success:
+                WebSocketMattermostApp.send_message(channel_id, "❌ Ошибка отправки PDF")
+        except Exception as e:
+            print(f"❌ Ошибка создания PDF: {e}")
+            WebSocketMattermostApp.send_message(channel_id, f"❌ Ошибка: {str(e)}")
 
-
-@dp.message(Command("start"))
-async def command_start_handler(message: Message):
-    await message.answer(
-        "Отправь данные в формате:\n\n"
-        "*Имя*, например: KHAED WADGE\n"
-        "*Адрес, 1 строка*, например: 2708123 Israel\n"
-        "*Адрес, 2 строка*, например: Hod Hasharon\n"
-        "*Адрес, 3 строка*, например: 5 Eln Hal\n"
-        "*Statement date*, например: Sep 22 2025\n"
-        "*Previouse balance date*, например: Aug 4\n"
-        "*Payment*, например: Aug 5\n"
-        "*Actual reading, 1 строка*, например: Sep 22, 2025\n"
-        "*Actual reading, 2 строка*, например: Aug 22, 2025\n"
-        "*1 блок данных с числами справа.*. Например: 182.55\n"
-        "*2 блок данных. Supplier.*, например: 131.76\n"
-        "*2 блок данных. Delivery.*, например: 79.63\n"
-        "*2 и 3 блок данных. Total.*, например: 125.39 или 116.39\n"
-        "*3 блок. The total ... by*, например Oct 22\n"
-        "*3 блок. Год на след строке, например 2025\n"
-        "*3 блок. Billing period*. Например: Aug 22- Sep 22 (30 days)\n"
-        "*3 блок снизу справа. 1 значение*, например: 23412\n"
-        "*3 блок снизу справа. 2 значение*, например: 12341\n"
-        "*4 блок сверху справа. Actual usage*, например: 1321\n"
-        "*5 блок. Total*, например: 189.76\n"
-        "*Блок слева. 1 строка*, например: Aug 2025 (37F)\n"
-        "*Блок слева. 2 строка*, например: Aug 2024 (37F)\n"
-        "*Киловаты. 1 строка*, например: 33\n"
-        "*Киловаты. 2 строка*, например: 33"
-    )
-
-
-@dp.message(F.text)
-async def process_text(message: Message):
-    text = message.text
-    lines = text.strip().split('\n')
-
-    if len(lines) < 20:
-        await message.answer("Недостаточно данных! Нужно минимум 20 строки.")
-        return
-
-    logging.info(f"Processing data.")
-    
-    await message.answer("Начинаю обработку PDF...")
-    
-    try:
-        # Генерация text_data
-        text_data = generate_text_data(text)
-        
-        # Создание PDF
-        editor = PDFEditor("template.pdf")
-        output_path = f"result_{message.from_user.id}.pdf"
-        editor.add_text(output_path, text_data)
-        
-        # Отправка PDF
-        pdf_file = FSInputFile(output_path)
-        await message.answer_document(
-            pdf_file,
-            caption="Готово! Вот твой PDF файл."
+    @staticmethod
+    def connect():
+        WebSocketMattermostApp.get_bot_id()
+        WebSocketMattermostApp.mm_ws_headers["Authorization"] = f"Bearer {WebSocketMattermostApp.bot_token}"
+        WebSocketMattermostApp.connection = websocket.WebSocketApp(
+            "wss://lizardteam.org/api/v4/websocket",
+            header=WebSocketMattermostApp.mm_ws_headers,
+            on_open=WebSocketMattermostApp.ws_on_open,
+            on_message=WebSocketMattermostApp.ws_on_message,
+            on_error=WebSocketMattermostApp.ws_on_error,
+            on_close=WebSocketMattermostApp.ws_on_close
         )
+        WebSocketMattermostApp.connection.run_forever(reconnect=5)
 
-        import os
-        os.remove(output_path)  # Удаляем файл после отправки
-        logging.info(f"PDF successfully created: {output_path}")
-        logging.info(f"PDF file deleted: {output_path}")
-        
-        
-    except Exception as e:
-        logging.error(f"Error creating PDF: {e}")
-        await message.answer(f"❌ Ошибка при создании PDF: {str(e)}")
+    @staticmethod
+    def ws_on_message(ws, message):
+        try:
+            data = json.loads(message)
+            event = data.get('event')
+            if event == 'posted':
+                post_data = json.loads(data['data']['post'])
+                user_id = post_data.get('user_id')
+                user_message = post_data.get('message', '').strip()
+                channel_id = post_data.get('channel_id')
+                if user_id == WebSocketMattermostApp.bot_user_id:
+                    return
+                if user_message.startswith('/'):
+                    command = user_message.split()[0].lower()
+                    if command == '/israel':
+                        WebSocketMattermostApp.user_modes[user_id] = 'israel'
+                        WebSocketMattermostApp.send_message(channel_id, "📝 Режим Israel активирован!\nТеперь отправь данные (24 строки):\nПример:\n" + ir_template)
+                        return
+                    elif command == '/ireland':
+                        WebSocketMattermostApp.user_modes[user_id] = 'ireland'
+                        WebSocketMattermostApp.send_message(channel_id, "📝 Режим Ireland активирован!\nТеперь отправь данные (24 строки):\nПример:\n" + ie_template)
+                        return
+                    elif command == '/uk':
+                        WebSocketMattermostApp.user_modes[user_id] = 'uk'
+                        WebSocketMattermostApp.send_message(channel_id, "📝 Режим UK активирован!\nТеперь отправь данные (12 строк):\nПример:\n" + gb_template)
+                        return
+                    elif command == '/info':
+                        help_text = """
+**Доступные команды:**
 
+`/israel` - создание PDF для Израиля  
+`/ireland` - создание PDF для Ирландии  
+`/uk` - создание PDF для Великобритании  
+`/return` - отменить текущий режим
+                        """
+                        WebSocketMattermostApp.send_message(channel_id, help_text)
+                        return
+                    elif command == '/return':
+                        if user_id in WebSocketMattermostApp.user_modes:
+                            del WebSocketMattermostApp.user_modes[user_id]
+                            WebSocketMattermostApp.send_message(channel_id, "❌ Режим отменён")
+                        else:
+                            WebSocketMattermostApp.send_message(channel_id, "ℹ️ Нет активного режима")
+                        return
+                mode = WebSocketMattermostApp.user_modes.get(user_id)
+                if mode == 'israel':
+                    WebSocketMattermostApp.process_pdf_ir(channel_id, user_id, user_message)
+                    del WebSocketMattermostApp.user_modes[user_id]
+                elif mode == 'ireland':
+                    WebSocketMattermostApp.process_pdf_ie(channel_id, user_id, user_message)
+                    del WebSocketMattermostApp.user_modes[user_id]
+                elif mode == 'uk':
+                    WebSocketMattermostApp.process_pdf_uk(channel_id, user_id, user_message)
+                    del WebSocketMattermostApp.user_modes[user_id]
+                else:
+                    WebSocketMattermostApp.send_message(channel_id, "ℹ️ Используй `/israel`, `/ireland` или `/uk` для создания PDF или `/info` для справки")
+        except Exception as e:
+            print(f"❌ Ошибка обработки: {e}")
 
-async def main() -> None:
-    bot = Bot(token=TOKEN)
-    logging.info("🤖 Bot started polling")
-    await dp.start_polling(bot)
+    @staticmethod
+    def ws_on_error(ws, error):
+        logging.error(f"Error: {error}")
 
+    @staticmethod
+    def ws_on_close(ws, close_status_code, close_msg):
+        logging.info(f"Connection closed {close_status_code} | {close_msg}")
+
+    @staticmethod
+    def ws_on_open(ws):
+        logging.info("Connection opened")
+
+logging.basicConfig(level=logging.INFO)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    print("🤖 Запуск PDF бота...")
+    try:
+        WebSocketMattermostApp.connect()
+    except KeyboardInterrupt:
+        print("\n👋 Бот остановлен")
