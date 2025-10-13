@@ -116,12 +116,14 @@ class text_generator:
         value_13 = lines[16].strip()
         value_14 = lines[17].strip()
         value_15 = lines[18].strip()
-        value_16 = lines[19].strip()
-        current_month_this_year = lines[20].strip()
-        current_month_last_year = lines[21].strip()
-        random_val1 = lines[22].strip()
-        random_val2 = lines[23].strip()
+        current_month_this_year = lines[19].strip()
+        current_month_last_year = lines[20].strip()
+        random_val1 = lines[21].strip()
+        random_val2 = lines[22].strip()
         meter = ''.join([str(randint(0, 9)) for _ in range(9)])
+        random_val3 = lines[23].strip()
+        value_16 = float(random_val3) * 0.103000
+        formatted_value_16 = f'{value_16:.2f}'
         
         text_data = [
             {'text': name, 'x': 560, 'y': 730, 'font': 'calibri_bold', 'size': 14, 'align': 'right'},
@@ -149,13 +151,14 @@ class text_generator:
             {'text': str(value_13), 'x': 556, 'y': 292.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
             {'text': str(value_14), 'x': 558, 'y': 279.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
             {'text': str(value_15), 'x': 562, 'y': 257.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': str(value_16), 'x': 562.5, 'y': 216.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': str(value_16), 'x': 562.5, 'y': 193, 'font': 'calibri', 'size': 11, 'align': 'left'},
+            {'text': str(formatted_value_16), 'x': 562.5, 'y': 216.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
+            {'text': str(formatted_value_16), 'x': 562.5, 'y': 193, 'font': 'calibri', 'size': 11, 'align': 'left'},
             {'text': current_month_this_year, 'x': 100, 'y': 381, 'font': 'calibri', 'size': 11, 'align': 'left'},
             {'text': current_month_last_year, 'x': 100, 'y': 367.3, 'font': 'calibri', 'size': 11, 'align': 'left'},
             {'text': str(random_val1), 'x': 212, 'y': 381, 'font': 'calibri', 'size': 11, 'align': 'left'},
             {'text': str(random_val2), 'x': 212, 'y': 367.3, 'font': 'calibri', 'size': 11, 'align': 'left'},
             {'text': meter, 'x': 440.6, 'y': 334.3, 'font': 'calibri', 'size': 11, 'align': 'left'},
+            {'text': random_val3, 'x': 414, 'y': 216.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
         ]
         
         return text_data
