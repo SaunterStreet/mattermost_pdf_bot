@@ -150,7 +150,7 @@ class text_generator:
             {'text': value_be_taken, 'x': 116, 'y': 366, 'font': 'calibri', 'size': 12, 'align': 'right'},
             {'text': name, 'x': 81.5, 'y': 243, 'font': 'calibri', 'size': 11, 'align': 'left'},
             {'text': address_street, 'x': 81.5, 'y': 231.4, 'font': 'calibri', 'size': 9, 'align': 'left'},
-            {'text': address_city, 'x': 81.5, 'y': 219.8, 'font': 'calibri', 'size': 9, 'align': 'left'},
+            {'text': f"{address_city}, ISRAEL", 'x': 81.5, 'y': 219.8, 'font': 'calibri', 'size': 9, 'align': 'left'},
             {'text': f"TEL: {tel}", 'x': 81.5, 'y': 208.2, 'font': 'calibri', 'size': 9, 'align': 'left'},
             {'text': acc_no, 'x': 400, 'y': 269, 'font': 'calibri', 'size': 10, 'align': 'right'},
             {'text': gprn, 'x': 400, 'y': 245, 'font': 'calibri', 'size': 10, 'align': 'right'},
