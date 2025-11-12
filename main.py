@@ -74,10 +74,10 @@ class WebSocketMattermostApp:
     @staticmethod
     def process_pdf_ir(channel_id, user_id, user_message):
         lines = user_message.strip().split('\n')
-        if len(lines) < 24:
+        if len(lines) < 20:
             WebSocketMattermostApp.send_message(
                 channel_id,
-                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 24."
+                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 20."
             )
             return
         print(f"📨 Обработка данных от {user_id}")
@@ -99,10 +99,10 @@ class WebSocketMattermostApp:
     @staticmethod
     def process_pdf_ie(channel_id, user_id, user_message):
         lines = user_message.strip().split('\n')
-        if len(lines) < 12:
+        if len(lines) < 23:
             WebSocketMattermostApp.send_message(
                 channel_id,
-                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 24."
+                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 23."
             )
             return
         print(f"📨 Обработка данных от {user_id}")
@@ -127,7 +127,7 @@ class WebSocketMattermostApp:
         if len(lines) < 12:
             WebSocketMattermostApp.send_message(
                 channel_id,
-                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 24."
+                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 12."
             )
             return
         print(f"📨 Обработка данных от {user_id}")

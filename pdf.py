@@ -18,7 +18,10 @@ pdfmetrics.registerFont(TTFont('utsaah', 'fonts/utsaah/utsaah.ttf'))
 pdfmetrics.registerFont(TTFont('tahoma', 'fonts/Tahoma/tahoma.ttf'))
 pdfmetrics.registerFont(TTFont('arial', 'fonts/Arial/ARIAL.TTF'))
 pdfmetrics.registerFont(TTFont('arialb', 'fonts/Arial/ARIALBD.TTF'))
+pdfmetrics.registerFont(TTFont('arial_black', 'fonts/Arial-black/arial_black.ttf'))
+pdfmetrics.registerFont(TTFont('arial_blacki', 'fonts/Arial-black/arial-black-italic.ttf'))
 pdfmetrics.registerFont(TTFont('verdana', 'fonts/Verdana/Verdana.ttf'))
+pdfmetrics.registerFont(TTFont('ocrb10', 'fonts/ocrb10/OCRB10.ttf'))
 
 class PDFEditor:
     def __init__(self, template_path: str):
@@ -97,68 +100,63 @@ class text_generator:
         lines = user_input.strip().split('\n')
         
         name = lines[0].strip()
-        address_line1 = lines[1].strip()
-        address_line2 = lines[2].strip()
-        address_line3 = lines[3].strip()
-        statement_date = lines[4].strip() 
-        account_number = ''.join([str(randint(0, 9)) for _ in range(11)])
-        date_5_1 = lines[5].strip()
-        date_5_2 = lines[6].strip()
-        date_format1 = lines[7].strip()
-        date_format2 = lines[8].strip()
-        value_6 = lines[9].strip()
-        value_7 = lines[10].strip()
-        value_8 = lines[11].strip()
-        value_9 = lines[12].strip()
-        next_month_format = lines[13].strip()
-        current_year = lines[14].strip()
-        period_text = lines[15].strip()
-        value_13 = lines[16].strip()
-        value_14 = lines[17].strip()
-        value_15 = lines[18].strip()
-        current_month_this_year = lines[19].strip()
-        current_month_last_year = lines[20].strip()
-        random_val1 = lines[21].strip()
-        random_val2 = lines[22].strip()
-        meter = ''.join([str(randint(0, 9)) for _ in range(9)])
-        random_val3 = lines[23].strip()
-        value_16 = float(random_val3) * 0.103000
-        formatted_value_16 = f'{value_16:.2f}'
+        address_street = lines[1].strip()
+        address_city = lines[2].strip()
+        address_postcode = lines[3].strip()
+
+        address = f"{address_street}, {address_city}, {address_postcode}"
+
+        emergency_no = lines[4].strip() 
+        acc_enquires = lines[5].strip()
+        # account_number = ''.join([str(randint(0, 9)) for _ in range(11)])
+        bill_period = lines[6].strip()
+        issue_date = lines[7].strip()
+        acc_no = lines[8].strip()
+        bill_no = lines[9].strip()
+        gprn = lines[10].strip()
+        amount_value1 = lines[11].strip()
+        amount_value2 = lines[12].strip()
+        amount_value3 = lines[13].strip()
+
+        noformat_value = float(amount_value1) - float(amount_value2) + float(amount_value3)
+        total_value = f"{noformat_value:.2f}"
+
+        unpaid_dd = lines[14].strip()
+        unpaid_dd_fee = lines[15].strip()
+        vat = lines[16].strip()
+        value_be_taken = lines[17].strip()
+        tel = lines[18].strip()
+        numbers = lines[19].strip()
         
         text_data = [
-            {'text': name, 'x': 560, 'y': 730, 'font': 'calibri_bold', 'size': 14, 'align': 'right'},
-            {'text': address_line1, 'x': 560, 'y': 717, 'font': 'calibri', 'size': 11, 'align': 'right'},
-            {'text': address_line2, 'x': 560, 'y': 704, 'font': 'calibri', 'size': 11, 'align': 'right'},
-            {'text': address_line3, 'x': 560, 'y': 691, 'font': 'calibri', 'size': 11, 'align': 'right'},
-            {'text': f'Statement date {statement_date}', 'x': 560, 'y': 678, 'font': 'calibri', 'size': 11, 'align': 'right'},
-            {'text': date_format1, 'x': 382, 'y': 293.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': date_format2, 'x': 382, 'y': 279.8, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': f'Account number: {account_number}', 'x': 560, 'y': 665, 'font': 'calibri', 'size': 11, 'align': 'right'},
-            {'text': date_5_1, 'x': 393.5, 'y': 612.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': date_5_2, 'x': 343.5, 'y': 585.9, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': str(value_6), 'x': 593, 'y': 612.5, 'font': 'calibri', 'size': 11, 'align': 'right'},
-            {'text': str(value_6), 'x': 593, 'y': 585.5, 'font': 'calibri', 'size': 11, 'align': 'right'},
-            {'text': str(value_7), 'x': 562.3, 'y': 516.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': str(value_8), 'x': 563.1, 'y': 502.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': str(value_9), 'x': 562, 'y': 488.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': str(value_9), 'x': 562, 'y': 466.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': next_month_format, 'x': 514, 'y': 453.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': current_year, 'x': 300.3, 'y': 440.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': address_line1, 'x': 300.3, 'y': 400.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': address_line2, 'x': 300.3, 'y': 387.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': address_line3, 'x': 300.3, 'y': 374.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': period_text, 'x': 380, 'y': 320.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': str(value_13), 'x': 556, 'y': 292.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': str(value_14), 'x': 558, 'y': 279.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': str(value_15), 'x': 562, 'y': 257.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': str(formatted_value_16), 'x': 562.5, 'y': 216.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': str(formatted_value_16), 'x': 562.5, 'y': 193, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': current_month_this_year, 'x': 100, 'y': 381, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': current_month_last_year, 'x': 100, 'y': 367.3, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': str(random_val1), 'x': 212, 'y': 381, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': str(random_val2), 'x': 212, 'y': 367.3, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': meter, 'x': 440.6, 'y': 334.3, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': random_val3, 'x': 414, 'y': 216.5, 'font': 'calibri', 'size': 11, 'align': 'left'},
+            {'text': name, 'x': 157.6, 'y': 714.6, 'font': 'calibri', 'size': 11, 'align': 'left'},
+            {'text': address, 'x': 157.6, 'y': 700.6, 'font': 'calibri', 'size': 11, 'align': 'left'},
+            {'text': emergency_no, 'x': 511.6, 'y': 740.1, 'font': 'calibri_bold', 'size': 10, 'align': 'left'},
+            {'text': acc_enquires, 'x': 517.5, 'y': 711.5, 'font': 'arial_blacki', 'size': 8, 'align': 'left'},
+            {'text': bill_period, 'x': 491, 'y': 694, 'font': 'ocrb10', 'size': 11, 'align': 'left'},
+            {'text': issue_date, 'x': 491, 'y': 682, 'font': 'ocrb10', 'size': 11, 'align': 'left'},
+            {'text': issue_date, 'x': 491, 'y': 664, 'font': 'ocrb10', 'size': 11, 'align': 'left'},
+            {'text': acc_no, 'x': 491, 'y': 645.5, 'font': 'ocrb10', 'size': 11, 'align': 'left'},
+            {'text': bill_no, 'x': 491, 'y': 634, 'font': 'ocrb10', 'size': 11, 'align': 'left'},
+            {'text': gprn, 'x': 491, 'y': 611.3, 'font': 'ocrb10', 'size': 11, 'align': 'left'},
+            {'text': amount_value1, 'x': 440, 'y': 484, 'font': 'calibri', 'size': 9, 'align': 'right'},
+            {'text': amount_value2, 'x': 440, 'y': 473, 'font': 'calibri', 'size': 9, 'align': 'right'},
+            {'text': amount_value3, 'x': 440, 'y': 416.6, 'font': 'calibri', 'size': 9, 'align': 'right'},
+            {'text': str(total_value), 'x': 407.5, 'y': 353.5, 'font': 'calibri_bold', 'size': 11, 'align': 'left'},
+            {'text': unpaid_dd, 'x': 362, 'y': 440, 'font': 'calibri', 'size': 9, 'align': 'right'},
+            {'text': unpaid_dd_fee, 'x': 362, 'y': 428.75, 'font': 'calibri', 'size': 9, 'align': 'right'},
+            {'text': vat, 'x': 362, 'y': 416.6, 'font': 'calibri', 'size': 9, 'align': 'right'},
+            {'text': unpaid_dd_fee, 'x': 241, 'y': 416.6, 'font': 'calibri', 'size': 9, 'align': 'left'},
+            {'text': value_be_taken, 'x': 116, 'y': 366, 'font': 'calibri', 'size': 12, 'align': 'right'},
+            {'text': name, 'x': 81.5, 'y': 243, 'font': 'calibri', 'size': 11, 'align': 'left'},
+            {'text': address_street, 'x': 81.5, 'y': 231.4, 'font': 'calibri', 'size': 9, 'align': 'left'},
+            {'text': address_city, 'x': 81.5, 'y': 219.8, 'font': 'calibri', 'size': 9, 'align': 'left'},
+            {'text': f"TEL: {tel}", 'x': 81.5, 'y': 208.2, 'font': 'calibri', 'size': 9, 'align': 'left'},
+            {'text': acc_no, 'x': 400, 'y': 269, 'font': 'calibri', 'size': 10, 'align': 'right'},
+            {'text': gprn, 'x': 400, 'y': 245, 'font': 'calibri', 'size': 10, 'align': 'right'},
+            {'text': issue_date, 'x': 400, 'y': 223, 'font': 'calibri', 'size': 10, 'align': 'right'},
+            {'text': str(total_value), 'x': 400, 'y': 200, 'font': 'calibri_bold', 'size': 10, 'align': 'right'},
+            {'text': numbers, 'x': 345, 'y': 132, 'font': 'ocrb10', 'size': 11, 'align': 'left'}
         ]
         
         return text_data
