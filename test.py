@@ -1,25 +1,25 @@
 from pdf import *
 
-user_message = """ILIA KOKOTOV
-51 Einstein
-Tel Aviv
-6946032
-2978 469810
-086 53218197по
-09 OCT 25
-09 NOV 25
-6434148
-1291287
-1872380
-368.80
-281.00
-170.02
-152.49
-14.26
-3.27
-98.00
-07-9682185
-09847 00009026798 0488078 692042"""
+user_message = """DANA YEHUDAI-OFIR
+36 Levi Eshkol
+Jerusalem
+9422904
+1964 582071
+042 91837456
+12 NOV 25
+12 NOV 25
+9925841
+5736198
+2947605
+423.40
+236.00
+171.85
+138.75
+10.20
+2.35
+109.00
+07-9723846
+09763 000010992584 0837415 942168"""
 
 text_data = text_generator.generate_text_data_ir(user_message)
 print("Начинаю обработку PDF")

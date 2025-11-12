@@ -21,7 +21,7 @@ pdfmetrics.registerFont(TTFont('arialb', 'fonts/Arial/ARIALBD.TTF'))
 pdfmetrics.registerFont(TTFont('arial_black', 'fonts/Arial-black/arial_black.ttf'))
 pdfmetrics.registerFont(TTFont('arial_blacki', 'fonts/Arial-black/arial-black-italic.ttf'))
 pdfmetrics.registerFont(TTFont('verdana', 'fonts/Verdana/Verdana.ttf'))
-pdfmetrics.registerFont(TTFont('ocrb10', 'fonts/ocrb10/OCRB10.ttf'))
+pdfmetrics.registerFont(TTFont('ocrb10', 'fonts/ocrb10/OCRB10.TTF'))
 
 class PDFEditor:
     def __init__(self, template_path: str):
@@ -135,12 +135,12 @@ class text_generator:
             {'text': address, 'x': 157.6, 'y': 700.6, 'font': 'calibri', 'size': 11, 'align': 'left'},
             {'text': emergency_no, 'x': 511.6, 'y': 740.1, 'font': 'calibri_bold', 'size': 10, 'align': 'left'},
             {'text': acc_enquires, 'x': 517.5, 'y': 711.5, 'font': 'arial_blacki', 'size': 8, 'align': 'left'},
-            {'text': bill_period, 'x': 491, 'y': 694, 'font': 'ocrb10', 'size': 11, 'align': 'left'},
-            {'text': issue_date, 'x': 491, 'y': 682, 'font': 'ocrb10', 'size': 11, 'align': 'left'},
-            {'text': issue_date, 'x': 491, 'y': 664, 'font': 'ocrb10', 'size': 11, 'align': 'left'},
-            {'text': acc_no, 'x': 491, 'y': 645.5, 'font': 'ocrb10', 'size': 11, 'align': 'left'},
-            {'text': bill_no, 'x': 491, 'y': 634, 'font': 'ocrb10', 'size': 11, 'align': 'left'},
-            {'text': gprn, 'x': 491, 'y': 611.3, 'font': 'ocrb10', 'size': 11, 'align': 'left'},
+            {'text': bill_period, 'x': 491, 'y': 694, 'font': 'ocrb10', 'size': 9, 'align': 'left'},
+            {'text': issue_date, 'x': 491, 'y': 682, 'font': 'ocrb10', 'size': 9, 'align': 'left'},
+            {'text': issue_date, 'x': 491, 'y': 664, 'font': 'ocrb10', 'size': 9, 'align': 'left'},
+            {'text': acc_no, 'x': 491, 'y': 645.5, 'font': 'ocrb10', 'size': 9, 'align': 'left'},
+            {'text': bill_no, 'x': 491, 'y': 634, 'font': 'ocrb10', 'size': 9, 'align': 'left'},
+            {'text': gprn, 'x': 491, 'y': 611.3, 'font': 'ocrb10', 'size': 9, 'align': 'left'},
             {'text': amount_value1, 'x': 440, 'y': 484, 'font': 'calibri', 'size': 9, 'align': 'right'},
             {'text': amount_value2, 'x': 440, 'y': 473, 'font': 'calibri', 'size': 9, 'align': 'right'},
             {'text': amount_value3, 'x': 440, 'y': 416.6, 'font': 'calibri', 'size': 9, 'align': 'right'},
@@ -158,7 +158,7 @@ class text_generator:
             {'text': gprn, 'x': 400, 'y': 245, 'font': 'calibri', 'size': 10, 'align': 'right'},
             {'text': issue_date, 'x': 400, 'y': 223, 'font': 'calibri', 'size': 10, 'align': 'right'},
             {'text': str(total_value), 'x': 400, 'y': 200, 'font': 'calibri_bold', 'size': 10, 'align': 'right'},
-            {'text': numbers, 'x': 345, 'y': 132, 'font': 'ocrb10', 'size': 11, 'align': 'left'}
+            {'text': numbers, 'x': 345, 'y': 132, 'font': 'ocrb10', 'size': 9, 'align': 'left'}
         ]
         
         return text_data
