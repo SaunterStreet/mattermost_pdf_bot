@@ -1,241 +1,235 @@
+import asyncio
 import logging
-import json
 import os
-import requests
-import websocket
-from pdf import *
-from templates import *
+from contextlib import suppress
+from tempfile import NamedTemporaryFile
+from typing import Awaitable, Callable, Dict, List, Optional, TypedDict
+
 from dotenv import load_dotenv
+from telegram import Update
+from telegram.constants import ParseMode
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
+
+from pdf import PDFEditor, text_generator
+from templates import gb_template, ie_template, ir_template
 
 load_dotenv()
 
-class WebSocketMattermostApp:
-    mm_ws_headers = dict()
-    connection = None
-    bot_token = os.getenv('BOT_TOKEN')
-    mm_url = os.getenv('MM_URL')
-    bot_user_id = None
-    user_modes = {}
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or os.getenv("BOT_TOKEN")
+if not BOT_TOKEN:
+    raise RuntimeError("TELEGRAM_BOT_TOKEN (или BOT_TOKEN) должен быть задан в .env")
 
-    @staticmethod
-    def get_bot_id():
-        url = f"{WebSocketMattermostApp.mm_url}/api/v4/users/me"
-        headers = {"Authorization": f"Bearer {WebSocketMattermostApp.bot_token}"}
-        try:
-            response = requests.get(url, headers=headers)
-            if response.status_code == 200:
-                user_data = response.json()
-                WebSocketMattermostApp.bot_user_id = user_data['id']
-                print(f"🤖 ID бота: {WebSocketMattermostApp.bot_user_id}")
-        except Exception as e:
-            print(f"❌ Ошибка получения ID: {e}")
+TextGenerator = Callable[[str], List[dict]]
 
-    @staticmethod
-    def send_message(channel_id, message_text):
-        url = f"{WebSocketMattermostApp.mm_url}/api/v4/posts"
-        headers = {
-            "Authorization": f"Bearer {WebSocketMattermostApp.bot_token}",
-            "Content-Type": "application/json"
-        }
-        data = {"channel_id": channel_id, "message": message_text}
-        try:
-            response = requests.post(url, headers=headers, json=data)
-            return response.status_code == 201
-        except Exception as e:
-            print(f"❌ Ошибка отправки: {e}")
-            return False
 
-    @staticmethod
-    def send_pdf(channel_id, pdf_path):
-        try:
-            upload_url = f"{WebSocketMattermostApp.mm_url}/api/v4/files"
-            headers = {"Authorization": f"Bearer {WebSocketMattermostApp.bot_token}"}
-            with open(pdf_path, 'rb') as f:
-                files = {'files': (os.path.basename(pdf_path), f)}
-                data = {'channel_id': channel_id}
-                response = requests.post(upload_url, headers=headers, files=files, data=data)
-            if response.status_code != 201:
-                print(f"❌ Ошибка загрузки: {response.status_code}")
-                return False
-            file_id = response.json()['file_infos'][0]['id']
-            post_url = f"{WebSocketMattermostApp.mm_url}/api/v4/posts"
-            headers["Content-Type"] = "application/json"
-            post_data = {
-                "channel_id": channel_id,
-                "message": "✅ Готово! Вот твой PDF файл.",
-                "file_ids": [file_id]
-            }
-            response = requests.post(post_url, headers=headers, json=post_data)
-            return response.status_code == 201
-        except Exception as e:
-            print(f"❌ Ошибка отправки PDF: {e}")
-            return False
+class ModeConfig(TypedDict):
+    label: str
+    required_lines: int
+    template_path: str
+    generator: TextGenerator
+    template_hint: str
+    result_name: str
 
-    @staticmethod
-    def process_pdf_ir(channel_id, user_id, user_message):
-        lines = user_message.strip().split('\n')
-        if len(lines) < 20:
-            WebSocketMattermostApp.send_message(
-                channel_id,
-                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 20."
-            )
-            return
-        print(f"📨 Обработка данных от {user_id}")
-        WebSocketMattermostApp.send_message(channel_id, "⏳ Начинаю обработку PDF...")
-        try:
-            text_data = text_generator.generate_text_data_ir(user_message)
-            editor = PDFEditor("template_ir.pdf")
-            output_path = f"result_{user_id}.pdf"
-            editor.add_text(output_path, text_data)
-            success = WebSocketMattermostApp.send_pdf(channel_id, output_path)
-            os.remove(output_path)
-            print(f"✅ PDF создан и отправлен: {output_path}")
-            if not success:
-                WebSocketMattermostApp.send_message(channel_id, "❌ Ошибка отправки PDF")
-        except Exception as e:
-            print(f"❌ Ошибка создания PDF: {e}")
-            WebSocketMattermostApp.send_message(channel_id, f"❌ Ошибка: {str(e)}")
 
-    @staticmethod
-    def process_pdf_ie(channel_id, user_id, user_message):
-        lines = user_message.strip().split('\n')
-        if len(lines) < 23:
-            WebSocketMattermostApp.send_message(
-                channel_id,
-                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 23."
-            )
-            return
-        print(f"📨 Обработка данных от {user_id}")
-        WebSocketMattermostApp.send_message(channel_id, "⏳ Начинаю обработку PDF...")
-        try:
-            text_data = text_generator.generate_text_data_ie(user_message)
-            editor = PDFEditor("template_ie.pdf")
-            output_path = f"result_{user_id}.pdf"
-            editor.add_text(output_path, text_data)
-            success = WebSocketMattermostApp.send_pdf(channel_id, output_path)
-            os.remove(output_path)
-            print(f"✅ PDF создан и отправлен: {output_path}")
-            if not success:
-                WebSocketMattermostApp.send_message(channel_id, "❌ Ошибка отправки PDF")
-        except Exception as e:
-            print(f"❌ Ошибка создания PDF: {e}")
-            WebSocketMattermostApp.send_message(channel_id, f"❌ Ошибка: {str(e)}")
+MODE_CONFIG: Dict[str, ModeConfig] = {
+    "israel": {
+        "label": "Israel",
+        "required_lines": 20,
+        "template_path": "template_ir.pdf",
+        "generator": text_generator.generate_text_data_ir,
+        "template_hint": ir_template,
+        "result_name": "israel_statement.pdf",
+    },
+    "ireland": {
+        "label": "Ireland",
+        "required_lines": 23,
+        "template_path": "template_ie.pdf",
+        "generator": text_generator.generate_text_data_ie,
+        "template_hint": ie_template,
+        "result_name": "ireland_statement.pdf",
+    },
+    "uk": {
+        "label": "UK",
+        "required_lines": 12,
+        "template_path": "template_uk.pdf",
+        "generator": text_generator.generate_text_data_uk,
+        "template_hint": gb_template,
+        "result_name": "uk_statement.pdf",
+    },
+}
 
-    @staticmethod
-    def process_pdf_uk(channel_id, user_id, user_message):
-        lines = user_message.strip().split('\n')
-        if len(lines) < 12:
-            WebSocketMattermostApp.send_message(
-                channel_id,
-                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 12."
-            )
-            return
-        print(f"📨 Обработка данных от {user_id}")
-        WebSocketMattermostApp.send_message(channel_id, "⏳ Начинаю обработку PDF...")
-        try:
-            text_data = text_generator.generate_text_data_uk(user_message)
-            editor = PDFEditor("template_uk.pdf")
-            output_path = f"result_{user_id}.pdf"
-            editor.add_text(output_path, text_data)
-            success = WebSocketMattermostApp.send_pdf(channel_id, output_path)
-            os.remove(output_path)
-            print(f"✅ PDF создан и отправлен: {output_path}")
-            if not success:
-                WebSocketMattermostApp.send_message(channel_id, "❌ Ошибка отправки PDF")
-        except Exception as e:
-            print(f"❌ Ошибка создания PDF: {e}")
-            WebSocketMattermostApp.send_message(channel_id, f"❌ Ошибка: {str(e)}")
+user_modes: Dict[int, str] = {}
 
-    @staticmethod
-    def connect():
-        WebSocketMattermostApp.get_bot_id()
-        WebSocketMattermostApp.mm_ws_headers["Authorization"] = f"Bearer {WebSocketMattermostApp.bot_token}"
-        WebSocketMattermostApp.connection = websocket.WebSocketApp(
-            "wss://lizardteam.org/api/v4/websocket",
-            header=WebSocketMattermostApp.mm_ws_headers,
-            on_open=WebSocketMattermostApp.ws_on_open,
-            on_message=WebSocketMattermostApp.ws_on_message,
-            on_error=WebSocketMattermostApp.ws_on_error,
-            on_close=WebSocketMattermostApp.ws_on_close
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.message
+    if not message:
+        return
+    await message.reply_text(
+        "Привет! Я генерирую PDF по заранее подготовленным шаблонам.\n"
+        "Выбери режим командой /israel, /ireland или /uk и отправь данные построчно.\n"
+        "Команда /info покажет подробную справку."
+    )
+
+
+async def info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.message
+    if not message:
+        return
+    await message.reply_text(
+        "Доступные режимы:\n"
+        "• /israel — счёт Israel (20 строк)\n"
+        "• /ireland — счёт Ireland (23 строки)\n"
+        "• /uk — счёт Великобритания (12 строк)\n\n"
+        "После активации режима просто пришли данные построчно. "
+        "Если нужен новый документ — выбери режим заново. "
+        "Команда /return отменяет текущий режим."
+    )
+
+
+async def activate_mode(update: Update, mode_key: str) -> None:
+    message = update.message
+    user = update.effective_user
+    if not message or not user:
+        return
+
+    config = MODE_CONFIG[mode_key]
+    user_modes[user.id] = mode_key
+    await message.reply_text(
+        f"📝 Режим {config['label']} активирован!\n"
+        f"Отправь {config['required_lines']} строк данных в одном сообщении.\n"
+        f"Пример:\n{config['template_hint']}",
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+
+def build_mode_handler(mode_key: str) -> Callable[[Update, ContextTypes.DEFAULT_TYPE], Awaitable[None]]:
+    async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        await activate_mode(update, mode_key)
+
+    return handler
+
+
+async def reset_mode(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.message
+    user = update.effective_user
+    if not message or not user:
+        return
+
+    if user.id in user_modes:
+        user_modes.pop(user.id, None)
+        await message.reply_text("❌ Режим отменён")
+    else:
+        await message.reply_text("ℹ️ Нет активного режима")
+
+
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.message
+    user = update.effective_user
+    if not message or not message.text or not user:
+        return
+
+    mode_key = user_modes.get(user.id)
+    if not mode_key:
+        await message.reply_text("ℹ️ Сначала выбери режим: /israel, /ireland или /uk")
+        return
+
+    await process_pdf(update, context, mode_key, message.text)
+    user_modes.pop(user.id, None)
+
+
+async def process_pdf(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    mode_key: str,
+    user_message: str,
+) -> None:
+    message = update.message
+    if not message:
+        return
+
+    config = MODE_CONFIG[mode_key]
+    required_lines = config["required_lines"]
+    lines = user_message.strip().split("\n")
+
+    if len(lines) < required_lines:
+        await message.reply_text(
+            f"❌ Недостаточно данных: получено {len(lines)}, нужно {required_lines} строк."
         )
-        WebSocketMattermostApp.connection.run_forever(reconnect=5)
+        return
 
-    @staticmethod
-    def ws_on_message(ws, message):
-        try:
-            data = json.loads(message)
-            event = data.get('event')
-            if event == 'posted':
-                post_data = json.loads(data['data']['post'])
-                user_id = post_data.get('user_id')
-                user_message = post_data.get('message', '').strip()
-                channel_id = post_data.get('channel_id')
-                if user_id == WebSocketMattermostApp.bot_user_id:
-                    return
-                if user_message.startswith('/'):
-                    command = user_message.split()[0].lower()
-                    if command == '/israel':
-                        WebSocketMattermostApp.user_modes[user_id] = 'israel'
-                        WebSocketMattermostApp.send_message(channel_id, "📝 Режим Israel активирован!\nТеперь отправь данные (24 строки):\nПример:\n" + ir_template)
-                        return
-                    elif command == '/ireland':
-                        WebSocketMattermostApp.user_modes[user_id] = 'ireland'
-                        WebSocketMattermostApp.send_message(channel_id, "📝 Режим Ireland активирован!\nТеперь отправь данные (24 строки):\nПример:\n" + ie_template)
-                        return
-                    elif command == '/uk':
-                        WebSocketMattermostApp.user_modes[user_id] = 'uk'
-                        WebSocketMattermostApp.send_message(channel_id, "📝 Режим UK активирован!\nТеперь отправь данные (12 строк):\nПример:\n" + gb_template)
-                        return
-                    elif command == '/info':
-                        help_text = """
-**Доступные команды:**
+    await message.reply_text("⏳ Начинаю обработку PDF...")
 
-`/israel` - создание PDF для Израиля  
-`/ireland` - создание PDF для Ирландии  
-`/uk` - создание PDF для Великобритании  
-`/return` - отменить текущий режим
-                        """
-                        WebSocketMattermostApp.send_message(channel_id, help_text)
-                        return
-                    elif command == '/return':
-                        if user_id in WebSocketMattermostApp.user_modes:
-                            del WebSocketMattermostApp.user_modes[user_id]
-                            WebSocketMattermostApp.send_message(channel_id, "❌ Режим отменён")
-                        else:
-                            WebSocketMattermostApp.send_message(channel_id, "ℹ️ Нет активного режима")
-                        return
-                mode = WebSocketMattermostApp.user_modes.get(user_id)
-                if mode == 'israel':
-                    WebSocketMattermostApp.process_pdf_ir(channel_id, user_id, user_message)
-                    del WebSocketMattermostApp.user_modes[user_id]
-                elif mode == 'ireland':
-                    WebSocketMattermostApp.process_pdf_ie(channel_id, user_id, user_message)
-                    del WebSocketMattermostApp.user_modes[user_id]
-                elif mode == 'uk':
-                    WebSocketMattermostApp.process_pdf_uk(channel_id, user_id, user_message)
-                    del WebSocketMattermostApp.user_modes[user_id]
-                else:
-                    WebSocketMattermostApp.send_message(channel_id, "ℹ️ Используй `/israel`, `/ireland` или `/uk` для создания PDF или `/info` для справки")
-        except Exception as e:
-            print(f"❌ Ошибка обработки: {e}")
+    pdf_path: Optional[str] = None
+    try:
+        generator: TextGenerator = config["generator"]
+        text_data = generator(user_message)
+        template_path = config["template_path"]
+        pdf_path = await asyncio.to_thread(build_pdf, template_path, text_data)
+        await send_pdf(update, context, pdf_path, config["result_name"])
+    except Exception as exc:  # noqa: BLE001
+        logging.exception("Не удалось создать PDF для режима %s", mode_key)
+        await message.reply_text(f"❌ Ошибка создания PDF: {exc}")
+    finally:
+        if pdf_path and os.path.exists(pdf_path):
+            with suppress(OSError):
+                os.remove(pdf_path)
 
-    @staticmethod
-    def ws_on_error(ws, error):
-        logging.error(f"Error: {error}")
 
-    @staticmethod
-    def ws_on_close(ws, close_status_code, close_msg):
-        logging.info(f"Connection closed {close_status_code} | {close_msg}")
+def build_pdf(template_path: str, text_data: List[dict]) -> str:
+    editor = PDFEditor(template_path)
+    with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        output_path = tmp.name
+    editor.add_text(output_path, text_data)
+    return output_path
 
-    @staticmethod
-    def ws_on_open(ws):
-        logging.info("Connection opened")
 
-logging.basicConfig(level=logging.INFO)
+async def send_pdf(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    pdf_path: str,
+    filename: str,
+) -> None:
+    chat = update.effective_chat
+    if not chat:
+        return
+    with open(pdf_path, "rb") as pdf_file:
+        await context.bot.send_document(
+            chat_id=chat.id,
+            document=pdf_file,
+            filename=filename,
+            caption="✅ Готово! Вот твой PDF файл.",
+        )
+
+
+async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.message
+    if message:
+        await message.reply_text("⚠️ Неизвестная команда. Используй /info для справки.")
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.INFO)
+    application = Application.builder().token(BOT_TOKEN).build()
+
+    application.add_handler(CommandHandler("start", start, block=True))
+    application.add_handler(CommandHandler("info", info, block=True))
+    application.add_handler(CommandHandler("return", reset_mode, block=True))
+    application.add_handler(CommandHandler("israel", build_mode_handler("israel"), block=True))
+    application.add_handler(CommandHandler("ireland", build_mode_handler("ireland"), block=True))
+    application.add_handler(CommandHandler("uk", build_mode_handler("uk"), block=True))
+    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text))
+    application.add_handler(MessageHandler(filters.COMMAND, unknown_command))
+
+    logging.info("Запуск Telegram PDF бота...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
 
 if __name__ == "__main__":
-    print("🤖 Запуск PDF бота...")
-    try:
-        WebSocketMattermostApp.connect()
-    except KeyboardInterrupt:
-        print("\n👋 Бот остановлен")
+    main()

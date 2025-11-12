@@ -12,7 +12,7 @@ gevent==25.9.1
 greenlet==3.2.4
 idna==3.10
 magic-filter==1.0.12
-mattermostdriver==7.3.2
+python-telegram-bot==21.6
 multidict==6.6.4
 pillow==11.3.0
 propcache==0.3.2
@@ -26,8 +26,6 @@ setuptools==80.9.0
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 urllib3==2.5.0
-websocket-client==1.9.0
-websockets==15.0.1
 yarl==1.20.1
 zope.event==6.0
 zope.interface==8.0.1
