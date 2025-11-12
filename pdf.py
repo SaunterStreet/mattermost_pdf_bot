@@ -127,6 +127,8 @@ class text_generator:
         value_be_taken = lines[17].strip()
         tel = lines[18].strip()
         numbers = lines[19].strip()
+
+        address_city_up = address_city.upper()
         
         text_data = [
             {'text': name, 'x': 157.6, 'y': 714.6, 'font': 'calibri', 'size': 11, 'align': 'left'},
@@ -149,8 +151,8 @@ class text_generator:
             {'text': unpaid_dd_fee, 'x': 241, 'y': 416.6, 'font': 'calibri', 'size': 9, 'align': 'left'},
             {'text': value_be_taken, 'x': 116, 'y': 366, 'font': 'calibri', 'size': 12, 'align': 'right'},
             {'text': name, 'x': 81.5, 'y': 243, 'font': 'calibri', 'size': 11, 'align': 'left'},
-            {'text': address_street, 'x': 81.5, 'y': 231.4, 'font': 'calibri', 'size': 9, 'align': 'left'},
-            {'text': f"{address_city}, ISRAEL", 'x': 81.5, 'y': 219.8, 'font': 'calibri', 'size': 9, 'align': 'left'},
+            {'text': address_street.upper(), 'x': 81.5, 'y': 231.4, 'font': 'calibri', 'size': 9, 'align': 'left'},
+            {'text': f"{address_city_up}, ISRAEL", 'x': 81.5, 'y': 219.8, 'font': 'calibri', 'size': 9, 'align': 'left'},
             {'text': f"TEL: {tel}", 'x': 81.5, 'y': 208.2, 'font': 'calibri', 'size': 9, 'align': 'left'},
             {'text': acc_no, 'x': 400, 'y': 269, 'font': 'calibri', 'size': 10, 'align': 'right'},
             {'text': gprn, 'x': 400, 'y': 245, 'font': 'calibri', 'size': 10, 'align': 'right'},
