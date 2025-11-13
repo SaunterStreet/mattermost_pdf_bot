@@ -74,10 +74,10 @@ class WebSocketMattermostApp:
     @staticmethod
     def process_pdf_ir(channel_id, user_id, user_message):
         lines = user_message.strip().split('\n')
-        if len(lines) < 20:
+        if len(lines) < 19:
             WebSocketMattermostApp.send_message(
                 channel_id,
-                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 20."
+                f"❌ Недостаточно данных! Получено {len(lines)} строк, нужно 19."
             )
             return
         print(f"📨 Обработка данных от {user_id}")
@@ -176,11 +176,11 @@ class WebSocketMattermostApp:
                     command = user_message.split()[0].lower()
                     if command == '/israel':
                         WebSocketMattermostApp.user_modes[user_id] = 'israel'
-                        WebSocketMattermostApp.send_message(channel_id, "📝 Режим Israel активирован!\nТеперь отправь данные (24 строки):\nПример:\n" + ir_template)
+                        WebSocketMattermostApp.send_message(channel_id, "📝 Режим Israel активирован!\nТеперь отправь данные (19 строк):\nПример:\n" + ir_template)
                         return
                     elif command == '/ireland':
                         WebSocketMattermostApp.user_modes[user_id] = 'ireland'
-                        WebSocketMattermostApp.send_message(channel_id, "📝 Режим Ireland активирован!\nТеперь отправь данные (24 строки):\nПример:\n" + ie_template)
+                        WebSocketMattermostApp.send_message(channel_id, "📝 Режим Ireland активирован!\nТеперь отправь данные (23 строки):\nПример:\n" + ie_template)
                         return
                     elif command == '/uk':
                         WebSocketMattermostApp.user_modes[user_id] = 'uk'
